@@ -3,10 +3,18 @@ services:
     name: energy-ai-web
     runtime: node
     plan: free
+    disk:
+      name: energy-ai-data
+      mountPath: /var/data
+      sizeGB: 1
     buildCommand: npm install --prefix client --include=dev && npm install --prefix server && npm run build --prefix client
     startCommand: NODE_ENV=production npm start --prefix server
     healthCheckPath: /api/health
     envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: APP_DATA_DIR
+        value: /var/data
       - key: BREVO_API_KEY
         sync: false
       - key: EMAIL_FROM
