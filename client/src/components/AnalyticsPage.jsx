@@ -89,7 +89,7 @@ function MetricCard({ title, value, icon: Icon, tint }) {
           <Icon size={16} />
         </span>
       </div>
-      <p className="font-display text-3xl font-bold text-[#14261a]">{value}</p>
+      <p className="font-display text-2xl font-bold text-[#14261a] sm:text-3xl">{value}</p>
     </article>
   );
 }
@@ -143,7 +143,7 @@ function LineChart({ title, points, suffix, stroke }) {
         <p className="text-sm text-[#61786a]">Not enough responses yet to render this graph.</p>
       ) : (
         <div>
-          <svg viewBox="0 0 100 100" className="h-44 w-full rounded-2xl bg-white p-2">
+          <svg viewBox="0 0 100 100" className="h-36 w-full rounded-2xl bg-white p-2 sm:h-44">
             <path d={path} fill="none" stroke={stroke} strokeWidth="2.5" />
           </svg>
           <div className="mt-2 flex items-center justify-between text-xs text-[#61786a]">
@@ -167,7 +167,7 @@ export default function AnalyticsPage({ sessions }) {
     <section className="space-y-4">
       <header className="rounded-[30px] border border-white/70 bg-white/80 p-5 shadow-soft backdrop-blur">
         <p className="text-xs uppercase tracking-[0.18em] text-[#5c7463]">Analytics Dashboard</p>
-        <h2 className="mt-1 font-display text-3xl font-bold text-[#14261a]">Energy AI Usage</h2>
+        <h2 className="mt-1 font-display text-2xl font-bold text-[#14261a] sm:text-3xl">Energy AI Usage</h2>
         <p className="mt-1 text-sm text-[#496252]">
           Track how often Energy AI stays efficient in low-energy mode versus escalating to high-energy reasoning.
         </p>

@@ -43,12 +43,12 @@ export default function ChatWindow({ messages, isLoading, userName }) {
   }, [messages, isLoading]);
 
   return (
-    <section className="flex h-full min-h-0 flex-col rounded-[34px] border border-white/70 bg-white/70 p-4 shadow-soft backdrop-blur">
-      <header className="mb-4 overflow-hidden rounded-[28px] border border-[#d7e0da] bg-[linear-gradient(135deg,#ffffff_0%,#eff8f2_52%,#fff2f2_100%)] p-5">
+    <section className="flex min-h-[420px] flex-col rounded-[28px] border border-white/70 bg-white/70 p-4 shadow-soft backdrop-blur sm:rounded-[34px] lg:h-full lg:min-h-0">
+      <header className="mb-4 overflow-hidden rounded-[24px] border border-[#d7e0da] bg-[linear-gradient(135deg,#ffffff_0%,#eff8f2_52%,#fff2f2_100%)] p-4 sm:rounded-[28px] sm:p-5">
         <p className="text-xs uppercase tracking-[0.24em] text-[#52705e]">Energy AI Stack</p>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+        <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
           <div className="max-w-2xl">
-            <h1 className="font-display text-3xl font-bold tracking-[-0.03em] text-[#112218]">Energy AI</h1>
+            <h1 className="font-display text-2xl font-bold tracking-[-0.03em] text-[#112218] sm:text-3xl">Energy AI</h1>
             <p className="mt-2 text-sm text-[#4a6555]">
               {userName
                 ? `${userName}'s private workspace. Auto-balances low-energy speed with high-energy reasoning and keeps source context visible when the backend can ground an answer.`
@@ -69,7 +69,7 @@ export default function ChatWindow({ messages, isLoading, userName }) {
         </div>
       </header>
 
-      <div ref={scrollRef} className="scrollbar-hide min-h-0 flex-1 space-y-4 overflow-auto px-1 pb-4">
+      <div ref={scrollRef} className="scrollbar-hide min-h-0 flex-1 space-y-4 overflow-auto px-1 pb-3 sm:pb-4">
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}

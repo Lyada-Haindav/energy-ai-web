@@ -14,9 +14,11 @@ const DATA_DIR = path.resolve(process.env.APP_DATA_DIR || path.join(PROJECT_ROOT
 const DATA_FILE = path.resolve(process.env.APP_DATA_FILE || path.join(DATA_DIR, "app-data.json"));
 
 let mongoCollectionPromise;
+let mongoFallbackLogged = false;
+let mongoPermanentlyDisabled = false;
 
 function useMongoStore() {
-  return Boolean(MONGODB_URI);
+  return Boolean(MONGODB_URI) && !mongoPermanentlyDisabled;
 }
 
 function cloneData(value) {
@@ -86,6 +88,17 @@ async function getMongoCollection() {
   return mongoCollectionPromise;
 }
 
+function disableMongoStore(error) {
+  mongoPermanentlyDisabled = true;
+  mongoCollectionPromise = null;
+
+  if (!mongoFallbackLogged) {
+    const message = error instanceof Error ? error.message : "Unknown MongoDB error.";
+    console.error(`MongoDB unavailable, falling back to file storage: ${message}`);
+    mongoFallbackLogged = true;
+  }
+}
+
 async function ensureDataFile() {
   await mkdir(DATA_DIR, { recursive: true });
 
@@ -116,7 +129,11 @@ async function writeDbToMongo(db) {
 
 async function readDbDirect() {
   if (useMongoStore()) {
-    return readDbFromMongo();
+    try {
+      return await readDbFromMongo();
+    } catch (error) {
+      disableMongoStore(error);
+    }
   }
 
   await ensureDataFile();
@@ -131,8 +148,12 @@ async function readDbDirect() {
 
 async function writeDbDirect(db) {
   if (useMongoStore()) {
-    await writeDbToMongo(db);
-    return;
+    try {
+      await writeDbToMongo(db);
+      return;
+    } catch (error) {
+      disableMongoStore(error);
+    }
   }
 
   await ensureDataFile();

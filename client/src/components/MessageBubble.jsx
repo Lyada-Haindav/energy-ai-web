@@ -150,10 +150,10 @@ export default function MessageBubble({ message }) {
     <article
       className={`animate-rise rounded-3xl border px-4 py-3 shadow-soft ${
         fromUser
-          ? "ml-auto max-w-[80%] border-[#0f2f20]/20 bg-[#0f2f20] text-white"
+          ? "ml-auto max-w-[92%] border-[#0f2f20]/20 bg-[#0f2f20] text-white sm:max-w-[80%]"
           : energyKey === "deep"
-            ? "mr-auto max-w-[85%] border-[#f0d1d1] bg-[#fff8f8] text-[#2d1313]"
-            : "mr-auto max-w-[85%] border-[#d8e7dc] bg-white text-[#14203a]"
+            ? "mr-auto max-w-[94%] border-[#f0d1d1] bg-[#fff8f8] text-[#2d1313] sm:max-w-[85%]"
+            : "mr-auto max-w-[94%] border-[#d8e7dc] bg-white text-[#14203a] sm:max-w-[85%]"
       }`}
     >
       <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] opacity-80">

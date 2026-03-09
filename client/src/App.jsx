@@ -145,8 +145,8 @@ function AppShell({
       </div>
 
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[linear-gradient(135deg,#07130f_0%,#10261b_52%,#351616_100%)]">
-        <div className="mx-auto flex min-h-16 w-full max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-6">
-          <div className="flex items-center gap-3 text-white">
+        <div className="mx-auto flex min-h-16 w-full max-w-[1440px] flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between lg:px-6">
+          <div className="flex w-full items-center gap-3 text-white sm:w-auto">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-[#bfe1cc]">
               <Zap size={16} />
             </span>
@@ -156,7 +156,7 @@ function AppShell({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
             <div className="hidden items-center gap-2 md:flex">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-[#3f7d5d] bg-[#163726] px-2.5 py-1 text-[11px] font-semibold text-[#bfe1cc]">
                 <Leaf size={12} />
@@ -172,7 +172,7 @@ function AppShell({
               <button
                 type="button"
                 onClick={() => onNavigate("chat")}
-                className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-semibold transition ${
+                className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-1.5 text-sm font-semibold transition sm:flex-none ${
                   page === "chat" ? "bg-white text-[#10261b]" : "bg-white/10 text-white hover:bg-white/20"
                 }`}
               >
@@ -182,7 +182,7 @@ function AppShell({
               <button
                 type="button"
                 onClick={() => onNavigate("analytics")}
-                className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-semibold transition ${
+                className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-1.5 text-sm font-semibold transition sm:flex-none ${
                   page === "analytics" ? "bg-white text-[#10261b]" : "bg-white/10 text-white hover:bg-white/20"
                 }`}
               >
@@ -202,7 +202,7 @@ function AppShell({
             <button
               type="button"
               onClick={onLogout}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/14 bg-white/8 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/16"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/14 bg-white/8 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/16"
             >
               <LogOut size={14} />
               Logout
@@ -212,7 +212,7 @@ function AppShell({
       </header>
 
       <section
-        className={`relative mx-auto w-full max-w-[1440px] p-4 lg:p-6 ${
+        className={`relative mx-auto w-full max-w-[1440px] p-3 sm:p-4 lg:p-6 ${
           page === "chat" ? "lg:h-[calc(100vh-4.5rem)] lg:overflow-hidden" : ""
         }`}
       >
@@ -267,7 +267,7 @@ function AppShell({
               removeChat={removeChat}
               owner={user.email}
             />
-            <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-3">
+            <section className="grid min-h-0 gap-3 lg:h-full lg:grid-rows-[minmax(0,1fr)_auto]">
               <ChatWindow messages={activeSession?.messages || []} isLoading={isLoading} userName={user.name} />
               <Composer isLoading={isLoading} onSend={sendMessage} mode={activeMode} setMode={setActiveMode} />
             </section>

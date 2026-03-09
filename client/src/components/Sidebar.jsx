@@ -16,7 +16,7 @@ export default function Sidebar({
   owner
 }) {
   return (
-    <aside className="flex h-full min-h-0 w-full flex-col rounded-[34px] border border-white/70 bg-white/70 p-4 shadow-soft backdrop-blur">
+    <aside className="flex min-h-0 w-full flex-col rounded-[28px] border border-white/70 bg-white/70 p-4 shadow-soft backdrop-blur sm:rounded-[34px] lg:h-full lg:max-h-none">
       <button
         type="button"
         onClick={createChat}
@@ -33,7 +33,7 @@ export default function Sidebar({
         </div>
         <span className="text-xs text-[#7b8d82]">{sessions.length} threads</span>
       </div>
-      <div className="scrollbar-hide flex min-h-0 flex-1 flex-col gap-2 overflow-auto pr-1">
+      <div className="scrollbar-hide flex max-h-[280px] min-h-0 flex-1 flex-col gap-2 overflow-auto pr-1 sm:max-h-[360px] lg:max-h-none">
         {sessions.map((session) => {
           const selected = session.id === activeSessionId;
           return (
@@ -61,7 +61,7 @@ export default function Sidebar({
                   onClick={() => {
                     removeChat(session.id);
                   }}
-                  className="rounded-lg p-1 text-slate-400 opacity-0 transition hover:bg-white/70 hover:text-[#c44949] group-hover:opacity-100"
+                  className="rounded-lg p-1 text-slate-400 opacity-100 transition hover:bg-white/70 hover:text-[#c44949] sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <Trash2 size={13} />
                 </button>
