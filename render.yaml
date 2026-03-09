@@ -3,12 +3,10 @@ services:
     name: energy-ai-web
     runtime: node
     plan: free
-    buildCommand: npm install --prefix client && npm install --prefix server && npm run build --prefix client
-    startCommand: npm start --prefix server
+    buildCommand: npm install --prefix client --include=dev && npm install --prefix server && npm run build --prefix client
+    startCommand: NODE_ENV=production npm start --prefix server
     healthCheckPath: /api/health
     envVars:
-      - key: NODE_ENV
-        value: production
       - key: BREVO_API_KEY
         sync: false
       - key: EMAIL_FROM
