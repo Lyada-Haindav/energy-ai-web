@@ -265,22 +265,35 @@ function modelFor(role) {
 
 function synthesizeMockResponse(prompt, role) {
   const question = extractLatestUserText(prompt);
+  const normalized = normalizePatternText(question);
+
   if (role === "router") {
     return hasDeepSignal(question) ? "deep" : "fast";
   }
 
-  if (role === "deep") {
-    return [
-      "Use high-energy mode for coding, planning, architecture, and multi-step analysis.",
-      "Improve training data quality first, then tune routing and prompts together."
-    ].join(" ");
+  if (GREETING_PATTERN.test(normalized)) {
+    return "Hi. How can I help today?";
   }
 
-  return [
-    "Energy AI low-energy mode engaged.",
-    "This path is optimized for direct answers with lower latency and lower compute cost.",
-    "Ask for high-energy mode when you want deeper reasoning, architecture, or full implementation detail."
-  ].join(" ");
+  if (HOW_ARE_YOU_PATTERN.test(normalized)) {
+    return "I am doing well. What do you want help with?";
+  }
+
+  if (FAREWELL_PATTERN.test(normalized)) {
+    return "Bye. If you need anything later, I will be here.";
+  }
+
+  if (CAPABILITY_PATTERN.test(normalized)) {
+    return role === "deep"
+      ? "I can help with deep reasoning, coding, debugging, architecture, planning, and detailed analysis."
+      : "I can help with direct answers, explanations, coding questions, and quick problem solving.";
+  }
+
+  if (role === "deep") {
+    return "Ask a complex question, and I will give a deeper structured answer.";
+  }
+
+  return "Ask your question, and I will answer directly.";
 }
 
 function ownModelsDir() {
