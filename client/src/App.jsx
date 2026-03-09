@@ -28,26 +28,30 @@ function parseRoute() {
   const normalized = raw.startsWith("#") ? raw.slice(1) : raw;
   const [pathPart, queryString = ""] = normalized.split("?");
   const params = new URLSearchParams(queryString);
+  const routeState = {
+    token: params.get("token") || "",
+    email: params.get("email") || ""
+  };
 
   switch (pathPart) {
     case "/home":
-      return { page: "home", token: params.get("token") || "" };
+      return { page: "home", ...routeState };
     case "/chat":
-      return { page: "chat", token: params.get("token") || "" };
+      return { page: "chat", ...routeState };
     case "/analytics":
-      return { page: "analytics", token: params.get("token") || "" };
+      return { page: "analytics", ...routeState };
     case "/signup":
-      return { page: "signup", token: params.get("token") || "" };
+      return { page: "signup", ...routeState };
     case "/forgot-password":
-      return { page: "forgot-password", token: params.get("token") || "" };
+      return { page: "forgot-password", ...routeState };
     case "/reset-password":
-      return { page: "reset-password", token: params.get("token") || "" };
+      return { page: "reset-password", ...routeState };
     case "/verify-email":
-      return { page: "verify-email", token: params.get("token") || "" };
+      return { page: "verify-email", ...routeState };
     case "/login":
-      return { page: "login", token: params.get("token") || "" };
+      return { page: "login", ...routeState };
     default:
-      return { page: "home", token: params.get("token") || "" };
+      return { page: "home", ...routeState };
   }
 }
 
@@ -307,7 +311,7 @@ export default function App() {
     syncError,
     activeMode,
     setActiveMode
-  } = useChat({ enabled: isAuthenticated });
+  } = useChat({ enabled: Boolean(isAuthenticated && user?.emailVerified) });
 
   const [route, setRoute] = useState(parseRoute());
 
@@ -331,10 +335,15 @@ export default function App() {
       return;
     }
 
-    if (isAuthenticated && (route.page === "login" || route.page === "signup")) {
+    if (isAuthenticated && user && !user.emailVerified && APP_ROUTES.has(route.page)) {
+      navigate("verify-email", { email: user.email });
+      return;
+    }
+
+    if (isAuthenticated && user?.emailVerified && (route.page === "login" || route.page === "signup")) {
       navigate("chat");
     }
-  }, [isAuthenticated, isBootstrapping, route.page]);
+  }, [isAuthenticated, isBootstrapping, route.page, user]);
 
   const page = useMemo(() => route.page, [route.page]);
 
@@ -359,6 +368,7 @@ export default function App() {
         <TokenActionPage
           mode={page}
           token={route.token}
+          email={route.email}
           onVerifyEmail={async (tokenValue) => {
             const result = await verifyEmail(tokenValue);
             await refreshUser().catch(() => null);

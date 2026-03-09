@@ -25,11 +25,11 @@ export default function TokenActionPage({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState(null);
-  const [isBusy, setIsBusy] = useState(mode === "verify-email");
+  const [isBusy, setIsBusy] = useState(mode === "verify-email" && Boolean(token));
   const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
-    if (mode !== "verify-email") {
+    if (mode !== "verify-email" || !token) {
       return undefined;
     }
 
@@ -155,9 +155,15 @@ export default function TokenActionPage({
         }
       >
         <p className="text-xs uppercase tracking-[0.24em] text-[#6a7e73]">Verification</p>
-        <h2 className="mt-2 font-display text-3xl font-bold tracking-[-0.03em] text-[#10261b]">Confirming your email</h2>
+        <h2 className="mt-2 font-display text-3xl font-bold tracking-[-0.03em] text-[#10261b]">
+          {token ? "Confirming your email" : "Check your email"}
+        </h2>
         <p className="mt-2 text-sm text-[#4d6357]">
-          Energy AI is validating the token from your verification link.
+          {token
+            ? "Energy AI is validating the token from your verification link."
+            : email
+              ? `Use the verification link sent to ${email}. If it expired, resend it below.`
+              : "Open the verification link from your inbox. If you need a new one, go back and resend it from sign in."}
         </p>
 
         <div className="mt-6 space-y-4">
@@ -180,14 +186,16 @@ export default function TokenActionPage({
           ) : null}
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => navigate("chat")}
-              className="inline-flex items-center justify-center gap-2 rounded-[22px] bg-[#0f2f20] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#164a31]"
-            >
-              <CheckCircle2 size={16} />
-              Continue to app
-            </button>
+            {status?.tone === "success" ? (
+              <button
+                type="button"
+                onClick={() => navigate("login")}
+                className="inline-flex items-center justify-center gap-2 rounded-[22px] bg-[#0f2f20] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#164a31]"
+              >
+                <CheckCircle2 size={16} />
+                Go to sign in
+              </button>
+            ) : null}
             {email ? (
               <button
                 type="button"

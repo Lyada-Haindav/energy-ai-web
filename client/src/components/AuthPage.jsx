@@ -69,9 +69,9 @@ export default function AuthPage({
           tone: result.emailDelivery?.previewOnly ? "neutral" : "success",
           text: result.emailDelivery?.previewOnly
             ? "Account created. Email delivery is not configured yet, so a preview verification link is shown below."
-            : "Account created. Check your inbox to verify your email."
+            : "Account created. Check your inbox to verify your email before signing in.",
+          previewUrl: result.emailDelivery?.previewUrl
         });
-        navigate("chat");
         return;
       }
 
@@ -90,6 +90,11 @@ export default function AuthPage({
       await onLogin({ email, password });
       navigate("chat");
     } catch (error) {
+      if (isLogin && error.status === 403) {
+        navigate("verify-email", { email });
+        return;
+      }
+
       setStatus({
         tone: "error",
         text: error.message || "Request failed."

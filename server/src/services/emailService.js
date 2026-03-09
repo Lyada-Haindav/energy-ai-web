@@ -60,8 +60,15 @@ async function sendBrevoEmail({ to, subject, htmlContent, textContent }) {
   };
 }
 
-export function buildVerifyUrl(token) {
-  return `${getAppBaseUrl()}/#/verify-email?token=${encodeURIComponent(token)}`;
+export function buildVerifyUrl(token, email = "") {
+  const params = new URLSearchParams();
+  params.set("token", String(token || ""));
+
+  if (email) {
+    params.set("email", String(email));
+  }
+
+  return `${getAppBaseUrl()}/#/verify-email?${params.toString()}`;
 }
 
 export function buildResetUrl(token) {
@@ -69,7 +76,7 @@ export function buildResetUrl(token) {
 }
 
 export async function sendVerificationEmail({ user, token }) {
-  const verifyUrl = buildVerifyUrl(token);
+  const verifyUrl = buildVerifyUrl(token, user.email);
   let result;
 
   try {

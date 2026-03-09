@@ -124,6 +124,11 @@ export async function loginUser({ email, password }) {
       error.statusCode = 401;
       throw error;
     }
+    if (!user.emailVerified) {
+      const error = new Error("Please verify your email before signing in.");
+      error.statusCode = 403;
+      throw error;
+    }
 
     db.sessions.push({
       id: crypto.randomUUID(),

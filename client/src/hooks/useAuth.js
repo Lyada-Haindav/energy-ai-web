@@ -82,7 +82,11 @@ export function useAuth() {
 
   async function register(payload) {
     const result = await registerRequest(payload);
-    persistSession(result.token, result.user);
+    if (result.user?.emailVerified) {
+      persistSession(result.token, result.user);
+    } else {
+      persistSession("", null);
+    }
     return result;
   }
 
