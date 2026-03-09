@@ -1,0 +1,10 @@
+{
+  "base_model": "distilbert-base-uncased",
+  "output_dir": "checkpoints/router",
+  "max_length": 512,
+  "learning_rate": 0.00005,
+  "num_train_epochs": 4,
+  "per_device_train_batch_size": 16,
+  "per_device_eval_batch_size": 16,
+  "weight_decay": 0.01
+}

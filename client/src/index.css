@@ -1,0 +1,43 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Poppins:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --text-main: #16241b;
+  --page-base: #f4efe4;
+  --accent-forest: #10261b;
+  --accent-mint: #2e8f63;
+  --accent-sun: #ffbe3b;
+  --accent-coral: #ff7a59;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+  font-family: "Poppins", sans-serif;
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at top left, rgba(255, 190, 59, 0.2), transparent 24%),
+    radial-gradient(circle at top right, rgba(46, 143, 99, 0.18), transparent 22%),
+    radial-gradient(circle at bottom right, rgba(255, 122, 89, 0.16), transparent 24%),
+    var(--page-base);
+}
+
+::selection {
+  background: rgba(255, 190, 59, 0.32);
+  color: var(--accent-forest);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

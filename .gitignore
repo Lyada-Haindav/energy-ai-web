@@ -1,0 +1,21 @@
+# Node
+node_modules/
+.npm/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Build output
+client/dist/
+server/dist/
+training/checkpoints/
+training/data/
+
+# Env
+.env
+server/.env
+
+# OS
+.DS_Store
