@@ -46,11 +46,15 @@ export default function TokenActionPage({
       }
 
       try {
-        await onVerifyEmail(token);
+        const result = await onVerifyEmail(token);
+        if (!ignore && result?.autoSignedIn) {
+          navigate("chat");
+          return;
+        }
         if (!ignore) {
           setStatus({
             tone: "success",
-            text: "Email verified. You can continue to the app now."
+            text: "Email verified. Sign in to continue."
           });
         }
       } catch (error) {
@@ -189,7 +193,7 @@ export default function TokenActionPage({
             {status?.tone === "success" ? (
               <button
                 type="button"
-                onClick={() => navigate("login")}
+                onClick={() => navigate("login", email ? { email } : {})}
                 className="inline-flex items-center justify-center gap-2 rounded-[22px] bg-[#0f2f20] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#164a31]"
               >
                 <CheckCircle2 size={16} />

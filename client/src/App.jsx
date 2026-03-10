@@ -388,6 +388,7 @@ export default function App() {
         onRegister={register}
         onForgotPassword={forgotPassword}
         navigate={navigate}
+        defaultEmail={route.email}
       />
     );
   }
@@ -400,6 +401,7 @@ export default function App() {
         onRegister={register}
         onForgotPassword={forgotPassword}
         navigate={navigate}
+        defaultEmail={route.email}
       />
     );
   }

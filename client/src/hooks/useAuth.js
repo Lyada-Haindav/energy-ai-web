@@ -12,10 +12,19 @@ import {
 } from "../lib/api";
 
 const TOKEN_STORAGE_KEY = "energy-ai-auth-token";
+const PENDING_TOKEN_STORAGE_KEY = "energy-ai-pending-auth-token";
 
 function readStoredToken() {
   try {
     return localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+function readStoredPendingToken() {
+  try {
+    return localStorage.getItem(PENDING_TOKEN_STORAGE_KEY) || "";
   } catch {
     return "";
   }
@@ -80,11 +89,21 @@ export function useAuth() {
     setUser(nextUser || null);
   }
 
+  function persistPendingToken(nextToken) {
+    if (nextToken) {
+      localStorage.setItem(PENDING_TOKEN_STORAGE_KEY, nextToken);
+    } else {
+      localStorage.removeItem(PENDING_TOKEN_STORAGE_KEY);
+    }
+  }
+
   async function register(payload) {
     const result = await registerRequest(payload);
     if (result.user?.emailVerified) {
+      persistPendingToken("");
       persistSession(result.token, result.user);
     } else {
+      persistPendingToken(result.token);
       persistSession("", null);
     }
     return result;
@@ -92,6 +111,7 @@ export function useAuth() {
 
   async function login(payload) {
     const result = await loginRequest(payload);
+    persistPendingToken("");
     persistSession(result.token, result.user);
     return result;
   }
@@ -102,6 +122,7 @@ export function useAuth() {
     } catch {
       // Clear local auth state even if the backend session already expired.
     } finally {
+      persistPendingToken("");
       persistSession("", null);
     }
   }
@@ -119,6 +140,24 @@ export function useAuth() {
 
   async function verifyEmail(tokenValue) {
     const result = await verifyEmailRequest({ token: tokenValue });
+    const pendingToken = readStoredPendingToken();
+
+    if (pendingToken) {
+      setAuthToken(pendingToken);
+
+      try {
+        const me = await whoAmI();
+        persistPendingToken("");
+        persistSession(pendingToken, me.user);
+        return {
+          ...result,
+          autoSignedIn: true
+        };
+      } catch {
+        setAuthToken("");
+        persistPendingToken("");
+      }
+    }
 
     if (user && result.user?.id === user.id) {
       setUser(result.user);
