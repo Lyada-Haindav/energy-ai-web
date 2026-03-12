@@ -25,15 +25,57 @@ async function hashPassword(password) {
   return `${salt}:${Buffer.from(derived).toString("hex")}`;
 }
 
-async function verifyPassword(password, storedHash) {
+function parsePasswordHash(storedHash) {
   const [salt, expectedHex] = String(storedHash || "").split(":");
-  if (!salt || !expectedHex) {
+  if (!salt || !expectedHex || expectedHex.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(expectedHex)) {
+    return null;
+  }
+
+  return {
+    salt,
+    expectedHex: expectedHex.toLowerCase()
+  };
+}
+
+async function verifyPasswordHash(password, storedHash) {
+  const parsed = parsePasswordHash(storedHash);
+  if (!parsed) {
     return false;
   }
 
-  const derived = await scryptAsync(password, salt, 64);
+  const derived = await scryptAsync(password, parsed.salt, 64);
   const actual = Buffer.from(derived).toString("hex");
-  return crypto.timingSafeEqual(Buffer.from(actual, "hex"), Buffer.from(expectedHex, "hex"));
+  return crypto.timingSafeEqual(Buffer.from(actual, "hex"), Buffer.from(parsed.expectedHex, "hex"));
+}
+
+async function verifyPassword(password, user) {
+  const storedHash = String(user?.passwordHash || "");
+  if (await verifyPasswordHash(password, storedHash)) {
+    return {
+      matches: true,
+      upgraded: false
+    };
+  }
+
+  const legacyPassword =
+    typeof user?.password === "string"
+      ? user.password
+      : storedHash && !parsePasswordHash(storedHash)
+        ? storedHash
+        : "";
+
+  if (!legacyPassword || password !== legacyPassword) {
+    return {
+      matches: false,
+      upgraded: false
+    };
+  }
+
+  return {
+    matches: true,
+    upgraded: true,
+    passwordHash: await hashPassword(password)
+  };
 }
 
 function createOpaqueToken() {
@@ -118,11 +160,22 @@ export async function loginUser({ email, password }) {
     pruneExpiredSessions(db);
 
     const user = findUserByEmail(db, normalizedEmail);
-    const matches = user ? await verifyPassword(password, user.passwordHash) : false;
-    if (!user || !matches) {
-      const error = new Error("Incorrect email or password.");
+    if (!user) {
+      const error = new Error("No account found for that email. Create an account first.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const verification = await verifyPassword(password, user);
+    if (!verification.matches) {
+      const error = new Error("Incorrect password.");
       error.statusCode = 401;
       throw error;
+    }
+    if (verification.upgraded && verification.passwordHash) {
+      user.passwordHash = verification.passwordHash;
+      delete user.password;
+      user.updatedAt = new Date().toISOString();
     }
     if (!user.emailVerified) {
       const error = new Error("Please verify your email before signing in.");
@@ -211,6 +264,27 @@ export async function createVerificationToken(email) {
   });
 }
 
+export async function getAccountStatus(email) {
+  const normalizedEmail = normalizeEmail(email);
+  const db = await readDb();
+  const user = findUserByEmail(db, normalizedEmail);
+
+  if (!user) {
+    return {
+      exists: false,
+      email: normalizedEmail
+    };
+  }
+
+  return {
+    exists: true,
+    email: user.email,
+    emailVerified: Boolean(user.emailVerified),
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
+  };
+}
+
 export async function verifyEmailToken(token) {
   const tokenHash = hashToken(token);
 
@@ -272,6 +346,7 @@ export async function resetPassword({ token, password }) {
     }
 
     user.passwordHash = passwordHash;
+    delete user.password;
     user.resetTokenHash = null;
     user.resetExpiresAt = null;
     user.updatedAt = new Date().toISOString();

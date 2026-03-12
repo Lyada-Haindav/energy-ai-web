@@ -13,6 +13,25 @@ function Notice({ tone = "neutral", children }) {
   return <div className={`rounded-2xl border px-4 py-3 text-sm ${toneClass}`}>{children}</div>;
 }
 
+function previewMessage(baseText, error) {
+  return error ? `${baseText} ${error}` : baseText;
+}
+
+function PreviewLink({ href, label }) {
+  if (!href) {
+    return null;
+  }
+
+  return (
+    <a
+      href={href}
+      className="mt-3 inline-flex items-center justify-center rounded-xl border border-[#b7d8c3] bg-white px-3 py-2 text-sm font-semibold text-[#0f2f20] transition hover:bg-[#f6fbf7]"
+    >
+      {label}
+    </a>
+  );
+}
+
 function Field({ label, type = "text", value, onChange, placeholder, autoComplete }) {
   return (
     <label className="block">
@@ -68,9 +87,13 @@ export default function AuthPage({
         setStatus({
           tone: result.emailDelivery?.previewOnly ? "neutral" : "success",
           text: result.emailDelivery?.previewOnly
-            ? "Account created. Email delivery is not configured yet, so a preview verification link is shown below."
-            : "Account created. Check your inbox to verify your email before signing in.",
-          previewUrl: result.emailDelivery?.previewUrl
+            ? previewMessage(
+                "Account created. Email delivery is not configured yet, so a preview verification link is shown below.",
+                result.emailDelivery?.error
+              )
+            : "Account created. Check your inbox to verify your email before signing in. If you do not see it soon, check spam or promotions for `Verify your Energy AI email`.",
+          previewUrl: result.emailDelivery?.previewOnly ? result.emailDelivery?.previewUrl : "",
+          previewLabel: "Open verification preview"
         });
         return;
       }
@@ -80,9 +103,13 @@ export default function AuthPage({
         setStatus({
           tone: result.emailDelivery?.previewOnly ? "neutral" : "success",
           text: result.emailDelivery?.previewOnly
-            ? "Reset flow created. Email delivery is disabled, so a preview reset link is shown below."
-            : result.message || "If that account exists, a reset email is on the way.",
-          previewUrl: result.emailDelivery?.previewUrl
+            ? previewMessage(
+                "Reset flow created. Email delivery is disabled, so a preview reset link is shown below.",
+                result.emailDelivery?.error
+              )
+            : `${result.message || "If that account exists, a reset email is on the way."} If you do not see it soon, check spam or promotions for \`Reset your Energy AI password\`.`,
+          previewUrl: result.emailDelivery?.previewOnly ? result.emailDelivery?.previewUrl : "",
+          previewLabel: "Open reset preview"
         });
         return;
       }
@@ -97,7 +124,12 @@ export default function AuthPage({
 
       setStatus({
         tone: "error",
-        text: error.message || "Request failed."
+        text:
+          (isLogin && error.status === 404
+            ? `${error.message || "No account found for that email."} Use Sign up to create it again.`
+            : isSignup && error.status === 409
+              ? `${error.message || "An account with that email already exists."} Try signing in or reset the password instead.`
+              : error.message) || "Request failed."
       });
     } finally {
       setIsSubmitting(false);
@@ -173,11 +205,7 @@ export default function AuthPage({
         {status ? (
           <Notice tone={status.tone}>
             <div>{status.text}</div>
-            {status.previewUrl ? (
-              <a href={status.previewUrl} className="mt-2 block break-all font-semibold text-[#0f2f20]">
-                {status.previewUrl}
-              </a>
-            ) : null}
+            <PreviewLink href={status.previewUrl} label={status.previewLabel} />
           </Notice>
         ) : null}
 

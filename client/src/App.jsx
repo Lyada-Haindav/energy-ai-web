@@ -96,6 +96,25 @@ function StatusBanner({ tone = "neutral", children, action }) {
   );
 }
 
+function previewMessage(baseText, error) {
+  return error ? `${baseText} ${error}` : baseText;
+}
+
+function PreviewLink({ href, label }) {
+  if (!href) {
+    return null;
+  }
+
+  return (
+    <a
+      href={href}
+      className="mt-2 inline-flex items-center justify-center rounded-xl border border-[#b7d8c3] bg-white px-3 py-2 font-semibold text-[#0f2f20] transition hover:bg-[#f6fbf7]"
+    >
+      {label}
+    </a>
+  );
+}
+
 function AppShell({
   page,
   user,
@@ -126,9 +145,13 @@ function AppShell({
       setBanner({
         tone: result.emailDelivery?.previewOnly ? "neutral" : "success",
         text: result.emailDelivery?.previewOnly
-          ? "Verification email prepared. Delivery is not configured yet, so use the preview link."
-          : result.message || "Verification email sent.",
-        previewUrl: result.emailDelivery?.previewUrl
+          ? previewMessage(
+              "Verification email prepared. Delivery is not configured yet, so use the preview link.",
+              result.emailDelivery?.error
+            )
+          : `${result.message || "Verification email sent."} If you do not see it soon, check spam or promotions for \`Verify your Energy AI email\`.`,
+        previewUrl: result.emailDelivery?.previewOnly ? result.emailDelivery?.previewUrl : "",
+        previewLabel: "Open verification preview"
       });
     } catch (error) {
       setBanner({
@@ -243,11 +266,7 @@ function AppShell({
           <StatusBanner tone={banner.tone}>
             <div>
               <div>{banner.text}</div>
-              {banner.previewUrl ? (
-                <a href={banner.previewUrl} className="mt-2 block break-all font-semibold text-[#0f2f20]">
-                  {banner.previewUrl}
-                </a>
-              ) : null}
+              <PreviewLink href={banner.previewUrl} label={banner.previewLabel} />
             </div>
           </StatusBanner>
         ) : null}

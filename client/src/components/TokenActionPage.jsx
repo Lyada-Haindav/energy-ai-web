@@ -13,6 +13,25 @@ function Notice({ tone = "neutral", children }) {
   return <div className={`rounded-2xl border px-4 py-3 text-sm ${toneClass}`}>{children}</div>;
 }
 
+function previewMessage(baseText, error) {
+  return error ? `${baseText} ${error}` : baseText;
+}
+
+function PreviewLink({ href, label }) {
+  if (!href) {
+    return null;
+  }
+
+  return (
+    <a
+      href={href}
+      className="mt-3 inline-flex items-center justify-center rounded-xl border border-[#b7d8c3] bg-white px-3 py-2 text-sm font-semibold text-[#0f2f20] transition hover:bg-[#f6fbf7]"
+    >
+      {label}
+    </a>
+  );
+}
+
 export default function TokenActionPage({
   mode,
   token,
@@ -131,9 +150,13 @@ export default function TokenActionPage({
       setStatus({
         tone: result.emailDelivery?.previewOnly ? "neutral" : "success",
         text: result.emailDelivery?.previewOnly
-          ? "Verification email prepared. Delivery is disabled, so a preview link is shown below."
-          : result.message || "Verification email sent.",
-        previewUrl: result.emailDelivery?.previewUrl
+          ? previewMessage(
+              "Verification email prepared. Delivery is disabled, so a preview link is shown below.",
+              result.emailDelivery?.error
+            )
+          : `${result.message || "Verification email sent."} If you do not see it soon, check spam or promotions for \`Verify your Energy AI email\`.`,
+        previewUrl: result.emailDelivery?.previewOnly ? result.emailDelivery?.previewUrl : "",
+        previewLabel: "Open verification preview"
       });
     } catch (error) {
       setStatus({
@@ -181,11 +204,7 @@ export default function TokenActionPage({
           {status ? (
             <Notice tone={status.tone}>
               <div>{status.text}</div>
-              {status.previewUrl ? (
-                <a href={status.previewUrl} className="mt-2 block break-all font-semibold text-[#0f2f20]">
-                  {status.previewUrl}
-                </a>
-              ) : null}
+              <PreviewLink href={status.previewUrl} label={status.previewLabel} />
             </Notice>
           ) : null}
 

@@ -20,9 +20,18 @@ async function sendBrevoEmail({ to, subject, htmlContent, textContent }) {
   const apiKey = process.env.BREVO_API_KEY;
 
   if (!apiKey || !sender) {
+    const reasons = [];
+    if (!apiKey) {
+      reasons.push("Email delivery is disabled because the Brevo API key is not configured.");
+    }
+    if (!sender) {
+      reasons.push("Email delivery is disabled because the sender address is not configured.");
+    }
+
     return {
       delivered: false,
-      previewOnly: true
+      previewOnly: true,
+      error: reasons.join(" ") || "Email delivery is not configured."
     };
   }
 
@@ -103,10 +112,12 @@ export async function sendVerificationEmail({ user, token }) {
     };
   }
 
-  return {
-    ...result,
-    previewUrl: verifyUrl
-  };
+  return result.previewOnly
+    ? {
+        ...result,
+        previewUrl: verifyUrl
+      }
+    : result;
 }
 
 export async function sendPasswordResetEmail({ user, token }) {
@@ -137,8 +148,10 @@ export async function sendPasswordResetEmail({ user, token }) {
     };
   }
 
-  return {
-    ...result,
-    previewUrl: resetUrl
-  };
+  return result.previewOnly
+    ? {
+        ...result,
+        previewUrl: resetUrl
+      }
+    : result;
 }
