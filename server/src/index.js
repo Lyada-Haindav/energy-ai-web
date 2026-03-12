@@ -4,6 +4,8 @@ import express from "express";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { describeStorageBackend } from "./services/dataStore.js";
+import { describeModelStack } from "./services/modelClient.js";
 import { authRouter } from "./routes/auth.js";
 import { chatRoute } from "./routes/chat.js";
 import { chatsRouter } from "./routes/chats.js";
@@ -27,7 +29,9 @@ app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
     service: "my-gpt-server",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    storage: describeStorageBackend(),
+    models: describeModelStack()
   });
 });
 

@@ -112,9 +112,8 @@ router.post("/resend-verification", async (req, res, next) => {
 
     const result = await createVerificationToken(email);
     if (!result) {
-      return res.json({
-        ok: true,
-        message: "If that account exists, a new verification email has been prepared."
+      return res.status(404).json({
+        error: "No account found for that email. Create an account first."
       });
     }
 
@@ -142,9 +141,8 @@ router.post("/forgot-password", async (req, res, next) => {
 
     const result = await createPasswordResetToken(email);
     if (!result) {
-      return res.json({
-        ok: true,
-        message: "If that account exists, a reset email has been prepared."
+      return res.status(404).json({
+        error: "No account found for that email. Create an account first."
       });
     }
 

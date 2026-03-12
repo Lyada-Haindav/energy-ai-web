@@ -184,3 +184,14 @@ export async function updateDb(mutator) {
 export function cloneSessions(sessions) {
   return cloneData(Array.isArray(sessions) ? sessions : []);
 }
+
+export function describeStorageBackend() {
+  return {
+    mode: useMongoStore() ? "mongo" : "file",
+    mongoConfigured: Boolean(MONGODB_URI),
+    mongoFallbackLogged,
+    mongoPermanentlyDisabled,
+    dataDir: DATA_DIR,
+    dataFile: DATA_FILE
+  };
+}
