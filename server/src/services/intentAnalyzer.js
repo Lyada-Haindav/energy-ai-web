@@ -18,7 +18,10 @@ const RECOMMENDATION_PATTERN = /\b(best|top|recommend|suggest|alternatives?|opti
 const PLANNING_PATTERN =
   /\b(plan|roadmap|strategy|steps|mvp|milestones|launch|build|create|design|architecture|project)\b/i;
 const COMPARISON_PATTERN = /\b(compare|comparison|difference|vs\b|versus|better|trade-?offs?|pros and cons)\b/i;
-const DEFINITION_PATTERN = /^(what|who)\s+is\b|^define\b|^meaning of\b/i;
+const DEFINITION_PATTERN =
+  /^(?:(?:can\s+i\s+know|do\s+you\s+know|tell\s+me|can\s+you\s+tell\s+me|could\s+you\s+tell\s+me|please\s+tell\s+me)\s+)?(what|who)\s+is\b|^define\b|^meaning of\b/i;
+const STANDALONE_DEFINITION_PATTERN =
+  /^(ai|llm|rag|ml|dl|nlp|cv|iot|api|ui|ux|cpu|gpu|ram|rom|dns|tcp|udp|sql|jwt|dbms|os|oops?|oop|coa|toc|se|dsa|daa|pysd|mac|macbook|gf|chai)$/i;
 const EXPLANATION_PATTERN = /\b(explain|overview|teach me|how does|how do|why does|why do)\b/i;
 const TRANSLATION_PATTERN = /^translate\b/i;
 const SUMMARY_PATTERN = /^(summari[sz]e|tl;dr)\b/i;
@@ -63,6 +66,9 @@ function detectIntentType(text) {
   if (DATE_TIME_PATTERN.test(text)) {
     return "datetime";
   }
+  if (DEFINITION_PATTERN.test(text) || STANDALONE_DEFINITION_PATTERN.test(text)) {
+    return "definition";
+  }
   if (DOWNLOAD_PATTERN.test(text)) {
     return "download";
   }
@@ -92,9 +98,6 @@ function detectIntentType(text) {
   }
   if (RECOMMENDATION_PATTERN.test(text)) {
     return "recommendation";
-  }
-  if (DEFINITION_PATTERN.test(text)) {
-    return "definition";
   }
   if (EXPLANATION_PATTERN.test(text)) {
     return "explanation";

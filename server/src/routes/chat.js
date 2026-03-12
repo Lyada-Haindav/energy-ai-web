@@ -9,7 +9,10 @@ const SIMPLE_SKIP_PATTERN =
   /^(hi|hello|hey|yo|good|great|nice|ok|okay|thanks|thank you|cool|how are you)\b/i;
 const ASSISTANT_META_PATTERN =
   /^(what(?:'s| is)\s+your\s+name|who\s+are\s+you|which\s+model\s+are\s+you|which\s+model\s+you\s+are|what\s+is\s+your\s+model\s+name|what\s+model\s+are\s+you)\??$/i;
-const SHORT_WHAT_IS_PATTERN = /^what\s+is\s+([a-z0-9-]{1,4})\??$/i;
+const WHAT_IS_PATTERN =
+  /^(?:(?:can\s+i\s+know|do\s+you\s+know|tell\s+me|can\s+you\s+tell\s+me|could\s+you\s+tell\s+me|please\s+tell\s+me)\s+)?what\s+is\s+(.+?)\??$/i;
+const SHORT_WHAT_IS_PATTERN =
+  /^(?:(?:can\s+i\s+know|do\s+you\s+know|tell\s+me|can\s+you\s+tell\s+me|could\s+you\s+tell\s+me|please\s+tell\s+me)\s+)?what\s+is\s+([a-z0-9-]{1,4})\??$/i;
 const AFFIRMATIVE_EXPLAIN_PATTERN =
   /^(yes|yeah|yep|sure|ok|okay)(?:\s+(please\s+)?)?(explain|elaborate|details?|more|continue|again|with\s+examples?|in\s+simple\s+words)\??$/i;
 const REWRITE_FOLLOWUP_PATTERN = /^(make\s+it(?:\s+(simple|simpler|short|shorter|clear|clearer|easy|easier|better|detailed))?)\??$/i;
@@ -79,7 +82,7 @@ function buildKnowledgeQuery(messages, intent = null) {
       secondPreviousTrimmed) ||
     previousTrimmed;
 
-  const latestWhatIsMatch = latestTrimmed.match(/^what\s+is\s+(.+?)\??$/i);
+  const latestWhatIsMatch = latestTrimmed.match(WHAT_IS_PATTERN);
   if (latestWhatIsMatch) {
     return latestWhatIsMatch[1].trim();
   }
@@ -89,7 +92,7 @@ function buildKnowledgeQuery(messages, intent = null) {
   }
 
   if (AFFIRMATIVE_EXPLAIN_PATTERN.test(latestTrimmed) || REWRITE_FOLLOWUP_PATTERN.test(latestTrimmed)) {
-    const match = previousAnchor.match(/^what\s+is\s+(.+?)\??$/i);
+    const match = previousAnchor.match(WHAT_IS_PATTERN);
     if (match) {
       return match[1].trim();
     }

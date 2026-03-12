@@ -16,8 +16,10 @@ const ACK_PATTERN = /^(good|great|nice|awesome|cool|fine|okay|ok|understood|got 
 const FAREWELL_PATTERN = /^(bye|goodbye|see\s+you|see\s+ya|talk\s+to\s+you\s+later|catch\s+you\s+later|later)\b/i;
 const CAPABILITY_PATTERN = /^(what\s+can\s+you\s+do|what\s+all\s+can\s+you\s+do|how\s+can\s+you\s+help|help|help\s+me)\??$/i;
 const CODING_START_PATTERN = /^(get\s+coding(?:\s+now)?|let'?s\s+code|start\s+coding|coding\s+now|code\s+now)\??$/i;
-const WHAT_IS_PATTERN = /^what\s+is\s+(.+?)\??$/i;
-const SHORT_AMBIGUOUS_WHAT_IS_PATTERN = /^what\s+is\s+([a-z0-9-]{1,4})\??$/i;
+const WHAT_IS_PATTERN =
+  /^(?:(?:can\s+i\s+know|do\s+you\s+know|tell\s+me|can\s+you\s+tell\s+me|could\s+you\s+tell\s+me|please\s+tell\s+me)\s+)?what\s+is\s+(.+?)\??$/i;
+const SHORT_AMBIGUOUS_WHAT_IS_PATTERN =
+  /^(?:(?:can\s+i\s+know|do\s+you\s+know|tell\s+me|can\s+you\s+tell\s+me|could\s+you\s+tell\s+me|please\s+tell\s+me)\s+)?what\s+is\s+([a-z0-9-]{1,4})\??$/i;
 const PROJECT_PATTERN = /\b(build|create|start|launch|make)\b.*\b(project|app|website|product|model|agent)\b|\bproject\b/i;
 const GENERIC_FOLLOWUP_PATTERN = /^(can\s+you\s+)?(explain|eplain|elaborate|details?|more|continue|why|how)(\b.*)?$/i;
 const AFFIRMATIVE_EXPLAIN_PATTERN =
@@ -61,6 +63,8 @@ const DATE_QUERY_PATTERN =
 const TIME_QUERY_PATTERN =
   /^(?:(?:can\s+i\s+know|tell\s+me|do\s+you\s+know)\s+)?(?:(?:what(?:'s| is)?|which)\s+)?(?:(current|now|right now)\s+)?time(?:\s+(?:now|it\s+is|is\s+it))?\??$/i;
 const CONFIRMATION_PATTERN = /^(is\s+(it|that|this)\s+true|is\s+(that|this)\s+(right|correct)|right|correct|really|are\s+you\s+sure)\??$/i;
+const ARITHMETIC_PREFIX_PATTERN = /^(?:what\s+is|calculate|compute|evaluate|solve)\s+(.+?)\??$/i;
+const SAFE_ARITHMETIC_PATTERN = /^[0-9+\-*/%().\s]+$/;
 const RESPONSE_TIMEZONE = process.env.APP_TIMEZONE || process.env.TZ || "Asia/Kolkata";
 const ownArtifactCache = new Map();
 const TERM_ALIASES = {
@@ -89,6 +93,9 @@ const TERM_ALIASES = {
   coa: "computer organization and architecture",
   toc: "theory of computation",
   se: "software engineering",
+  mac: "apple mac",
+  macbook: "apple macbook",
+  "mac book": "apple macbook",
   "artificial inteligence": "artificial intelligence",
   "artificial intelegence": "artificial intelligence",
   "artifical intelligence": "artificial intelligence"
@@ -164,6 +171,10 @@ const KNOWN_DEFINITIONS = {
     "Theory of Computation studies what problems can be solved by machines and how efficiently they can be solved using formal models.",
   "software engineering":
     "Software engineering is the disciplined process of designing, building, testing, deploying, and maintaining software systems.",
+  "apple mac":
+    "Mac usually means Apple's Macintosh computers. Depending on context, it can refer to MacBook laptops, iMac desktops, or the Mac platform in general.",
+  "apple macbook":
+    "MacBook is Apple's laptop line. It runs macOS and is sold mainly as MacBook Air and MacBook Pro.",
   llm: "An LLM is a large language model trained on text to understand and generate human-like language.",
   rag: "RAG combines retrieval and generation: the model fetches relevant documents first, then answers using that evidence.",
   transformer: "A transformer is a neural architecture that uses attention to model relationships between tokens efficiently.",
@@ -198,6 +209,17 @@ const LOW_QUALITY_PATTERNS = [
   /\bdomain\s+\d+\s+is\b/i,
   /\b\d+\s+year old man\b/i,
   /\bcartoon character\b/i
+];
+
+const GENERIC_ASSISTANT_META_PATTERNS = [
+  /^i can cover many topics\b/i,
+  /^i can help with coding, debugging, explanations, planning, writing\b/i,
+  /^i can help with direct answers, explanations, coding questions, and quick problem solving\b/i,
+  /^i can help with deep reasoning, coding, debugging, architecture, planning, and detailed analysis\b/i,
+  /\bask (?:any|your) question\b/i,
+  /\bgive me a task\b/i,
+  /\btell me your next question\b/i,
+  /\bsend the problem statement, language, and constraints\b/i
 ];
 
 function normalizePatternText(text) {
@@ -263,6 +285,23 @@ function modelFor(role) {
   return process.env.ROUTER_MODEL || "energy-router-v1";
 }
 
+export function describeModelStack() {
+  return {
+    fast: {
+      provider: providerFor("fast"),
+      model: modelFor("fast")
+    },
+    deep: {
+      provider: providerFor("deep"),
+      model: modelFor("deep")
+    },
+    router: {
+      provider: providerFor("router"),
+      model: modelFor("router")
+    }
+  };
+}
+
 function synthesizeMockResponse(prompt, role) {
   const question = extractLatestUserText(prompt);
   const normalized = normalizePatternText(question);
@@ -288,12 +327,7 @@ function synthesizeMockResponse(prompt, role) {
       ? "I can help with deep reasoning, coding, debugging, architecture, planning, and detailed analysis."
       : "I can help with direct answers, explanations, coding questions, and quick problem solving.";
   }
-
-  if (role === "deep") {
-    return "Ask a complex question, and I will give a deeper structured answer.";
-  }
-
-  return "Ask your question, and I will answer directly.";
+  return generateRuleBasedResponse(role, prompt, null, { sources: [] });
 }
 
 function ownModelsDir() {
@@ -445,6 +479,75 @@ function formatCurrentTimeResponse() {
   }).format(now);
 
   return `Current time is ${readable} on ${iso} in ${RESPONSE_TIMEZONE}.`;
+}
+
+function extractArithmeticExpression(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const prefixed = trimmed.match(ARITHMETIC_PREFIX_PATTERN);
+  const expression = (prefixed ? prefixed[1] : trimmed).trim();
+
+  if (!SAFE_ARITHMETIC_PATTERN.test(expression) || !/[+\-*/%]/.test(expression)) {
+    return "";
+  }
+
+  return expression;
+}
+
+function formatArithmeticNumber(value) {
+  if (Number.isInteger(value)) {
+    return String(value);
+  }
+
+  return Number(value.toFixed(8)).toString();
+}
+
+function evaluateArithmeticExpression(text) {
+  const expression = extractArithmeticExpression(text);
+  if (!expression) {
+    return null;
+  }
+
+  try {
+    const result = Function(`"use strict"; return (${expression});`)();
+    if (typeof result !== "number" || !Number.isFinite(result)) {
+      return null;
+    }
+
+    return {
+      expression: expression.replace(/\s+/g, " "),
+      result: formatArithmeticNumber(result)
+    };
+  } catch {
+    return null;
+  }
+}
+
+function arithmeticResponse(text, options = {}) {
+  const evaluated = evaluateArithmeticExpression(text);
+  if (!evaluated) {
+    return "";
+  }
+
+  if (options.deep) {
+    return [
+      "1) Expression",
+      `- ${evaluated.expression}`,
+      "",
+      "2) Result",
+      `- ${evaluated.result}`
+    ].join("\n");
+  }
+
+  return [
+    "1) Expression",
+    `- ${evaluated.expression}`,
+    "2) Result",
+    `- ${evaluated.result}`
+  ].join("\n");
 }
 
 function isContextualFollowup(text, previousUserText) {
@@ -635,6 +738,42 @@ function firstSentence(text) {
   return segments[0] || trimmed;
 }
 
+function buildGenerationState(prompt, intent = null, knowledge = null) {
+  const userTurns = extractUserTurns(prompt);
+  const assistantTurns = extractAssistantTurns(prompt);
+  const userText = userTurns[userTurns.length - 1] || extractLatestUserText(prompt);
+  const previousUserText = userTurns[userTurns.length - 2] || "";
+  const secondPreviousUserText = userTurns[userTurns.length - 3] || "";
+  const taskAnchorUserText = findTaskAnchorUserText(userTurns);
+  const preferFullCode = hasPersistentFullCodePreference(userTurns);
+  const previousAssistantText = assistantTurns[assistantTurns.length - 1] || "";
+  const knowledgeContext = extractKnowledgeContext(prompt);
+  const followup =
+    isContextualFollowup(userText, previousUserText) || CONFIRMATION_PATTERN.test(normalizePatternText(userText));
+  const retrievalSeed =
+    followup && taskAnchorUserText && intent?.previousIsMeaningful !== false
+      ? `${taskAnchorUserText} ${userText}`
+      : followup && previousUserText && intent?.previousIsMeaningful !== false
+        ? `${previousUserText} ${userText}`
+        : userText;
+  const queryTokens = tokenizeWords(retrievalSeed);
+
+  return {
+    userText,
+    queryTokens,
+    context: {
+      previousUserText,
+      secondPreviousUserText,
+      previousAssistantText,
+      taskAnchorUserText,
+      preferFullCode,
+      followup,
+      knowledgeContext,
+      knowledgeSources: Array.isArray(knowledge?.sources) ? knowledge.sources : []
+    }
+  };
+}
+
 function hasRepetitivePhrase(text) {
   const tokens = tokenizeWords(text);
   if (tokens.length < 12) {
@@ -652,9 +791,22 @@ function hasRepetitivePhrase(text) {
   return false;
 }
 
+function isGenericAssistantMetaCompletion(text) {
+  const normalized = compactResponseText(text);
+  if (!normalized) {
+    return false;
+  }
+
+  return GENERIC_ASSISTANT_META_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
 function isLowQualityCompletion(text) {
   const normalized = (text || "").replace(/\s+/g, " ").trim();
   if (!normalized || normalized.length < 8) {
+    return true;
+  }
+
+  if (isGenericAssistantMetaCompletion(normalized)) {
     return true;
   }
 
@@ -803,6 +955,37 @@ function deepKnowledgeGroundedResponse(topic, knowledgeContext = "", knowledgeSo
     ...details.map((sentence) => `- ${sentence}`),
     "",
     sourceNotes.length > 0 ? "3) Grounding" : "",
+    ...sourceNotes.map((note) => `- ${note}`)
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function fastKnowledgeGroundedResponse(topic, knowledgeContext = "", knowledgeSources = []) {
+  const entries = extractKnowledgeEntries(knowledgeContext, knowledgeSources);
+  if (entries.length === 0) {
+    return "";
+  }
+
+  const lead = firstSentence(entries[0].text || entries[0].snippet || "").trim();
+  if (!lead || isLowQualityCompletion(lead)) {
+    return "";
+  }
+
+  const details = uniqueKnowledgeSentences(entries, 3).filter((sentence) => sentence !== lead).slice(0, 2);
+  const sourceNotes = entries
+    .slice(0, 2)
+    .map((entry) => sourceDisplay(entry))
+    .filter(Boolean);
+
+  return [
+    "1) Core answer",
+    `- ${lead}`,
+    details.length > 0 ? "" : null,
+    details.length > 0 ? "2) Key points" : null,
+    ...details.map((sentence) => `- ${sentence}`),
+    sourceNotes.length > 0 ? "" : null,
+    sourceNotes.length > 0 ? "3) Sources" : null,
     ...sourceNotes.map((note) => `- ${note}`)
   ]
     .filter(Boolean)
@@ -2775,6 +2958,11 @@ function composeFastResponse(userText, matches, ownModel, context, intent = null
     return formatCurrentTimeResponse();
   }
 
+  const arithmetic = arithmeticResponse(userText);
+  if (arithmetic) {
+    return arithmetic;
+  }
+
   if (downloadRequest) {
     return downloadResponse(userText, scopedContext);
   }
@@ -2848,12 +3036,20 @@ function composeFastResponse(userText, matches, ownModel, context, intent = null
     return lowInformationResponse();
   }
 
+  const grounded = fastKnowledgeGroundedResponse(
+    userText,
+    scopedContext.knowledgeContext,
+    scopedContext.knowledgeSources
+  ) || knowledgeGroundedResponse(scopedContext.knowledgeContext);
   const whatIsMatch = normalizedText.match(WHAT_IS_PATTERN);
+  if (grounded && whatIsMatch) {
+    return grounded;
+  }
+
   if (whatIsMatch) {
     return definitionResponse(whatIsMatch[1], matches, scopedContext.knowledgeContext);
   }
 
-  const grounded = knowledgeGroundedResponse(scopedContext.knowledgeContext);
   if (grounded && ["definition", "explanation", "general", "comparison"].includes(intent?.type || "")) {
     return grounded;
   }
@@ -2972,6 +3168,11 @@ function composeDeepResponse(userText, matches, ownModel, context, intent = null
 
   if (isTimeQuestion(userText)) {
     return buildDeepEnvelope(userText, formatCurrentTimeResponse());
+  }
+
+  const arithmetic = arithmeticResponse(userText, { deep: true });
+  if (arithmetic) {
+    return buildDeepEnvelope(userText, arithmetic);
   }
 
   if (downloadRequest) {
@@ -3116,41 +3317,25 @@ function composeDeepResponse(userText, matches, ownModel, context, intent = null
 }
 
 function generateFromOwnModel(role, prompt, ownModel, intent = null, knowledge = null) {
-  const userTurns = extractUserTurns(prompt);
-  const assistantTurns = extractAssistantTurns(prompt);
-  const userText = userTurns[userTurns.length - 1] || extractLatestUserText(prompt);
-  const previousUserText = userTurns[userTurns.length - 2] || "";
-  const secondPreviousUserText = userTurns[userTurns.length - 3] || "";
-  const taskAnchorUserText = findTaskAnchorUserText(userTurns);
-  const preferFullCode = hasPersistentFullCodePreference(userTurns);
-  const previousAssistantText = assistantTurns[assistantTurns.length - 1] || "";
-  const knowledgeContext = extractKnowledgeContext(prompt);
-  const followup =
-    isContextualFollowup(userText, previousUserText) || CONFIRMATION_PATTERN.test(normalizePatternText(userText));
-  const retrievalSeed =
-    followup && taskAnchorUserText && intent?.previousIsMeaningful !== false
-      ? `${taskAnchorUserText} ${userText}`
-      : followup && previousUserText && intent?.previousIsMeaningful !== false
-        ? `${previousUserText} ${userText}`
-        : userText;
-  const queryTokens = tokenizeWords(retrievalSeed);
+  const { userText, queryTokens, context } = buildGenerationState(prompt, intent, knowledge);
   const matches = retrieveTopMatches(queryTokens, ownModel.pairs || [], 4);
-  const context = {
-    previousUserText,
-    secondPreviousUserText,
-    previousAssistantText,
-    taskAnchorUserText,
-    preferFullCode,
-    followup,
-    knowledgeContext,
-    knowledgeSources: Array.isArray(knowledge?.sources) ? knowledge.sources : []
-  };
 
   if (role === "deep") {
     return composeDeepResponse(userText, matches, ownModel, context, intent);
   }
 
   return composeFastResponse(userText, matches, ownModel, context, intent);
+}
+
+function generateRuleBasedResponse(role, prompt, intent = null, knowledge = null) {
+  const { userText, context } = buildGenerationState(prompt, intent, knowledge);
+  const matches = [];
+
+  if (role === "deep") {
+    return composeDeepResponse(userText, matches, null, context, intent);
+  }
+
+  return composeFastResponse(userText, matches, null, context, intent);
 }
 
 function parseRouterDecision(text) {
@@ -3317,7 +3502,7 @@ export async function generateTextForRole({ role, prompt, intent = null, knowled
 
   if (provider === "mock") {
     return {
-      text: synthesizeMockResponse(prompt, role),
+      text: generateRuleBasedResponse(role, prompt, intent, knowledge),
       model: `${model}-mock`
     };
   }

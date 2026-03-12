@@ -39,6 +39,9 @@ const QUERY_ALIASES = {
   coa: "computer organization and architecture",
   toc: "theory of computation",
   se: "software engineering",
+  mac: "apple mac",
+  macbook: "apple macbook",
+  "mac book": "apple macbook",
   "artificial inteligence": "artificial intelligence",
   "artificial intelegence": "artificial intelligence"
 };
