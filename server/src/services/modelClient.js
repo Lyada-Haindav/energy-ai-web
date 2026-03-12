@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gunzipSync } from "node:zlib";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -346,8 +347,21 @@ async function loadOwnArtifact(role) {
   }
 
   const artifactPath = path.join(modelDir, `${role}.json`);
-  const raw = await fs.readFile(artifactPath, "utf-8");
-  const parsed = JSON.parse(raw);
+  let parsed;
+
+  try {
+    const raw = await fs.readFile(artifactPath, "utf-8");
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+
+    const compressedPath = path.join(modelDir, `${role}.json.gz`);
+    const compressed = await fs.readFile(compressedPath);
+    parsed = JSON.parse(gunzipSync(compressed).toString("utf-8"));
+  }
+
   ownArtifactCache.set(cacheKey, parsed);
   return parsed;
 }
@@ -580,10 +594,12 @@ function isShallowCodeFollowup(text) {
   if (!trimmed) {
     return false;
   }
+
+  const words = countWords(trimmed);
   return (
-    CODE_ONLY_PATTERN.test(trimmed) ||
+    (words <= 5 && CODE_ONLY_PATTERN.test(trimmed)) ||
     LANGUAGE_ONLY_PATTERN.test(trimmed) ||
-    FULL_CODE_PATTERN.test(trimmed)
+    (words <= 8 && FULL_CODE_PATTERN.test(trimmed))
   );
 }
 
@@ -1506,6 +1522,18 @@ function detectCodingTask(userText) {
     };
   }
 
+  if (/\bvowel\b|\bconsonant\b/.test(lowered)) {
+    return {
+      id: "vowel_check",
+      label: "Vowel Check",
+      complexity: "O(1) time, O(1) space",
+      logic: [
+        "Read one character and normalize it to lowercase.",
+        "Compare it against a, e, i, o, u and report whether it is a vowel or consonant."
+      ]
+    };
+  }
+
   if (/\bfibonacci|fibo\b/.test(lowered)) {
     return {
       id: "fibonacci",
@@ -1703,6 +1731,9 @@ function edgeCasesForTask(taskId) {
   if (taskId === "generic") {
     return ["Minimum-size input.", "Maximum-size input.", "Repeated values, boundary indices, and overflow risk."];
   }
+  if (taskId === "vowel_check") {
+    return ["Uppercase letters.", "Non-alphabetic characters.", "Whitespace or missing input."];
+  }
   return common;
 }
 
@@ -1797,6 +1828,29 @@ function applyFullProgramWrapper(taskId, language, snippet, style) {
       "  int a, b;",
       "  if (scanf(\"%d %d\", &a, &b) != 2) return 0;",
       "  printf(\"%d\\n\", add(a, b));",
+      "  return 0;",
+      "}"
+    ].join("\n");
+  }
+
+  if (taskId === "vowel_check" && language === "c") {
+    return [
+      "#include <ctype.h>",
+      "#include <stdio.h>",
+      "",
+      "int is_vowel(char ch) {",
+      "  ch = (char)tolower((unsigned char)ch);",
+      "  return ch == 'a' || ch == 'e' || ch == 'i' || ch == 'o' || ch == 'u';",
+      "}",
+      "",
+      "int main(void) {",
+      "  char ch;",
+      "  if (scanf(\" %c\", &ch) != 1) return 0;",
+      "  if (!isalpha((unsigned char)ch)) {",
+      "    printf(\"Not an alphabet\\n\");",
+      "    return 0;",
+      "  }",
+      "  printf(\"%s\\n\", is_vowel(ch) ? \"Vowel\" : \"Consonant\");",
       "  return 0;",
       "}"
     ].join("\n");
@@ -2110,6 +2164,21 @@ function buildTaskSnippet(taskId, language, style) {
       return wrap(recursive);
     }
     return wrap(iterative);
+  }
+
+  if (taskId === "vowel_check") {
+    return wrap(
+      snippetByLanguage(language, {
+      python: "def is_vowel(ch):\n    return ch.lower() in {'a', 'e', 'i', 'o', 'u'}",
+      javascript: "function isVowel(ch) {\n  return \"aeiou\".includes(ch.toLowerCase());\n}",
+      typescript: "function isVowel(ch: string): boolean {\n  return \"aeiou\".includes(ch.toLowerCase());\n}",
+      java: "public static boolean isVowel(char ch) {\n  ch = Character.toLowerCase(ch);\n  return ch == 'a' || ch == 'e' || ch == 'i' || ch == 'o' || ch == 'u';\n}",
+      c: "int is_vowel(char ch) {\n  ch = (char)tolower((unsigned char)ch);\n  return ch == 'a' || ch == 'e' || ch == 'i' || ch == 'o' || ch == 'u';\n}",
+      cpp: "bool isVowel(char ch) {\n  ch = (char)tolower(static_cast<unsigned char>(ch));\n  return ch == 'a' || ch == 'e' || ch == 'i' || ch == 'o' || ch == 'u';\n}",
+      go: "func IsVowel(ch byte) bool {\n  switch ch | 32 {\n  case 'a', 'e', 'i', 'o', 'u':\n    return true\n  default:\n    return false\n  }\n}",
+      rust: "fn is_vowel(ch: char) -> bool {\n    matches!(ch.to_ascii_lowercase(), 'a' | 'e' | 'i' | 'o' | 'u')\n}"
+    })
+    );
   }
 
   if (taskId === "fibonacci") {
@@ -2669,7 +2738,7 @@ function codingImplementationResponse(userText, options = {}) {
 
   const latestTrimmed = latestText.trim();
   const latestLanguageOnly = LANGUAGE_ONLY_PATTERN.test(latestTrimmed);
-  const latestCodeOnly = CODE_ONLY_PATTERN.test(latestTrimmed) || FULL_CODE_PATTERN.test(latestTrimmed);
+  const latestCodeOnly = isShallowCodeFollowup(latestTrimmed) && !latestLanguageOnly;
 
   const previousIsLanguageOnly = LANGUAGE_ONLY_PATTERN.test(previousText.trim());
   const languageSource = latestLanguageOnly
@@ -2774,6 +2843,15 @@ function codingImplementationResponseWithTests(userText) {
 }
 
 function codeIntentText(userText, context) {
+  const trimmed = String(userText || "").trim();
+  const hasFreshTask =
+    detectCodingTask(trimmed).id !== "generic" ||
+    /\b(vowel|consonant|alphabet|palindrome|factorial|fibonacci|prime|reverse|string|search|sort|sum|tree|graph)\b/i.test(trimmed);
+
+  if (hasFreshTask) {
+    return trimmed;
+  }
+
   if (context.followup && context.taskAnchorUserText) {
     return `${context.taskAnchorUserText} ${userText}`.trim();
   }
@@ -2894,9 +2972,7 @@ function composeFastResponse(userText, matches, ownModel, context, intent = null
   const contestPrompt = looksLikeContestProblem(codeText);
   const followupCodeOnly =
     scopedContext.previousUserText &&
-    (CODE_ONLY_PATTERN.test(userText.trim()) ||
-      LANGUAGE_ONLY_PATTERN.test(userText.trim()) ||
-      FULL_CODE_PATTERN.test(userText.trim()));
+    isShallowCodeFollowup(userText.trim());
   const downloadRequest = intent?.type === "download" || DOWNLOAD_REQUEST_PATTERN.test(userText);
   const shoppingRequest = intent?.type === "shopping" || SHOPPING_REQUEST_PATTERN.test(userText);
   const builderRequest = intent?.type === "builder" || BUILDER_REQUEST_PATTERN.test(userText);
@@ -3103,9 +3179,7 @@ function composeDeepResponse(userText, matches, ownModel, context, intent = null
   const contestPrompt = looksLikeContestProblem(codeText);
   const followupCodeOnly =
     scopedContext.previousUserText &&
-    (CODE_ONLY_PATTERN.test(userText.trim()) ||
-      LANGUAGE_ONLY_PATTERN.test(userText.trim()) ||
-      FULL_CODE_PATTERN.test(userText.trim()));
+    isShallowCodeFollowup(userText.trim());
   const downloadRequest = intent?.type === "download" || DOWNLOAD_REQUEST_PATTERN.test(userText);
   const shoppingRequest = intent?.type === "shopping" || SHOPPING_REQUEST_PATTERN.test(userText);
   const builderRequest = intent?.type === "builder" || BUILDER_REQUEST_PATTERN.test(userText);

@@ -11,6 +11,20 @@ services:
     startCommand: NODE_ENV=production npm start --prefix server
     healthCheckPath: /api/health
     envVars:
+      - key: OWN_MODELS_DIR
+        value: server/model-artifacts/own
+      - key: ROUTER_PROVIDER
+        value: own
+      - key: FAST_PROVIDER
+        value: own
+      - key: DEEP_PROVIDER
+        value: own
+      - key: ROUTER_MODEL
+        value: energy-router-own-v1
+      - key: FAST_MODEL
+        value: energy-low-own-v1
+      - key: DEEP_MODEL
+        value: energy-high-own-v1
       - key: MONGODB_URI
         sync: false
       - key: APP_DATA_DIR
