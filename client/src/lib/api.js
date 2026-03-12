@@ -141,7 +141,9 @@ export async function streamChat({ messages, mode, signal, onEvent }) {
   });
 
   if (!response.ok || !response.body) {
-    throw new Error(await readError(response));
+    const error = new Error(await readError(response));
+    error.status = response.status;
+    throw error;
   }
 
   const reader = response.body.getReader();

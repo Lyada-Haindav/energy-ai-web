@@ -56,6 +56,22 @@ function normalizeSessions(value) {
   }));
 }
 
+function chatErrorMessage(error) {
+  if (error?.status === 401) {
+    return "Your session expired. Sign in again and resend the message.";
+  }
+
+  if (error?.status === 403) {
+    return "Verify your email before using chat.";
+  }
+
+  if (error?.message) {
+    return error.message;
+  }
+
+  return "I could not reach the Energy AI backend. Start the server and confirm the provider settings in `.env`.";
+}
+
 export function useChat({ enabled }) {
   const [sessions, setSessions] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
@@ -292,8 +308,7 @@ export function useChat({ enabled }) {
 
           return {
             ...message,
-            content:
-              "I could not reach the Energy AI backend. Start the server and confirm the provider settings in `.env`."
+            content: chatErrorMessage(error)
           };
         })
       }));
